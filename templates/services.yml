@@ -1,0 +1,52 @@
+# Service for the Backend
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.Release.Name }}-backend-svc
+  namespace: convex
+spec:
+  type: {{.Values.service.backend.type }}
+  selector:
+    app: {{.Release.Name }}-backend
+  ports:
+    - name: api 
+      protocol: TCP
+      port: {{.Values.service.backend.port }}
+      targetPort: api 
+    - name: http-actions 
+      protocol: TCP
+      port: {{.Values.service.backend.actionsPort }}
+      targetPort: http-actions 
+---
+# Service for the Dashboard
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.Release.Name }}-dashboard-svc
+  namespace: convex
+spec:
+  type: {{.Values.service.dashboard.type }}
+  selector:
+    app: {{.Release.Name }}-dashboard
+  ports:
+    - protocol: TCP
+      port: {{.Values.service.dashboard.port }}
+      targetPort: {{.Values.service.dashboard.targetPort }}
+---
+# Headless Service for the Backend StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.Release.Name }}-backend-headless
+  namespace: convex
+  labels:
+    app: {{.Release.Name }}-backend
+spec:
+  ports:
+  - port: 3210
+    name: api
+  - port: 3211
+    name: http-actions
+  clusterIP: None
+  selector:
+    app: {{.Release.Name }}-backend

@@ -1,0 +1,50 @@
+# values.yaml
+
+# -- Global settings for the release
+replicaCount: 1
+
+# -- Configuration for the Convex Backend
+backend:
+  image:
+    repository: ghcr.io/get-convex/convex-backend
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "latest"
+  
+  # -- Reference to the Kubernetes secret containing admin keys
+  secretsName: convex-secrets
+
+  # -- Configuration for the backend's persistent storage
+  persistence:
+    enabled: true
+    storageClassName: "longhorn-standard"
+    accessMode: ReadWriteOnce
+    size: 5Gi
+
+# -- Configuration for the Convex Dashboard
+dashboard:
+  image:
+    repository: ghcr.io/get-convex/convex-dashboard
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+# -- Service configurations
+service:
+  # -- Configuration for the main backend service
+  backend:
+    type: ClusterIP
+    port: 3210
+    actionsPort: 3211
+  
+  # -- Configuration for the dashboard service
+  dashboard:
+    type: ClusterIP
+    port: 80
+    targetPort: 6791
+
+# -- Central configuration for Convex environment variables
+convexConfig:
+  cloudOrigin: "http://localhost:3210"
+  siteOrigin: "http://localhost:3211"
+  deploymentUrl: "http://localhost:3210"
+  requireSsl: "true"

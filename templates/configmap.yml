@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{.Release.Name }}-config
+  namespace: convex
+data:
+  CONVEX_CLOUD_ORIGIN: "{{.Values.convexConfig.cloudOrigin }}"
+  CONVEX_SITE_ORIGIN: "{{.Values.convexConfig.siteOrigin }}"
+  NEXT_PUBLIC_DEPLOYMENT_URL: "{{.Values.convexConfig.deploymentUrl }}"
+  DO_NOT_REQUIRE_SSL: "{{.Values.convexConfig.requireSsl }}"

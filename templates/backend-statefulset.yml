@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{.Release.Name }}-backend
+  namespace: convex
+spec:
+  serviceName: "{{.Release.Name }}-backend-headless"
+  replicas: {{.Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{.Release.Name }}-backend
+  template:
+    metadata:
+      labels:
+        app: {{.Release.Name }}-backend
+    spec:
+      containers:
+      - name: convex-backend
+        image: "{{.Values.backend.image.repository }}:{{.Values.backend.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{.Values.backend.image.pullPolicy }}
+        ports:
+        - containerPort: 3210
+          name: api
+        - containerPort: 3211
+          name: http-actions
+        envFrom:
+        - secretRef:
+            name: {{.Values.backend.secretsName }}
+        - configMapRef:
+            name: {{.Release.Name }}-config
+        volumeMounts:
+        - name: data
+          mountPath: /convex/data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{.Release.Name }}-backend-pvc

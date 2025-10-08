@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.Release.Name }}-dashboard
+  namespace: convex
+  labels:
+    app: {{.Release.Name }}-dashboard
+spec:
+  replicas: {{.Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{.Release.Name }}-dashboard
+  template:
+    metadata:
+      labels:
+        app: {{.Release.Name }}-dashboard
+    spec:
+      containers:
+      - name: convex-dashboard
+        image: "{{.Values.dashboard.image.repository }}:{{.Values.dashboard.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{.Values.dashboard.image.pullPolicy }}
+        ports:
+        - containerPort: {{.Values.service.dashboard.targetPort }}
+        envFrom:
+        - configMapRef:
+            name: {{.Release.Name }}-config
