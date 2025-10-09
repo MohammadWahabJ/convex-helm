@@ -4,7 +4,21 @@ metadata:
   name: {{.Release.Name }}-config
   namespace: convex
 data:
+  {{- /* This is the conditional logic block */}}
+  {{- if .Values.ingress.enabled }}
+  {{- /* If Ingress is enabled, use the public, secure URLs */}}
+  CONVEX_CLOUD_ORIGIN: "https://{{.Values.ingress.backend.host }}"
+  {{- if .Values.ingress.site }}
+  CONVEX_SITE_ORIGIN: "https://{{.Values.ingress.site.host }}"
+  {{- else }}
+  CONVEX_SITE_ORIGIN: "https://{{.Values.ingress.dashboard.host }}"
+  {{- end }}
+  NEXT_PUBLIC_DEPLOYMENT_URL: "https://{{.Values.ingress.backend.host }}"
+  DO_NOT_REQUIRE_SSL: "false"
+  {{- else }}
+  {{- /* If Ingress is disabled, fall back to the localhost values */}}
   CONVEX_CLOUD_ORIGIN: "{{.Values.convexConfig.cloudOrigin }}"
   CONVEX_SITE_ORIGIN: "{{.Values.convexConfig.siteOrigin }}"
   NEXT_PUBLIC_DEPLOYMENT_URL: "{{.Values.convexConfig.deploymentUrl }}"
-  DO_NOT_REQUIRE_SSL: "{{.Values.convexConfig.requireSsl }}"
+  DO_NOT_REQUIRE_SSL: "true"
+  {{- end }}
