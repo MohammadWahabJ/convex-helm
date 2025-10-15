@@ -23,6 +23,15 @@ spec:
           name: api
         - containerPort: 3211
           name: http-actions
+        env:
+        {{- /* If postgres is enabled, mount the database URL from the specified secret */}}
+        {{- if .Values.postgres.enabled }}
+        - name: DATABASE_URL 
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.postgres.existingSecret }}
+              key: {{ .Values.postgres.secretKey }}
+        {{- end }}
         envFrom:
         - secretRef:
             name: {{.Values.backend.secretsName }}

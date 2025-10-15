@@ -21,6 +21,18 @@ backend:
     accessMode: ReadWriteOnce
     size: 5Gi
 
+# -- PostgreSQL database configuration
+# If enabled, the backend will use an external PostgreSQL database.
+# The connection URL should be stored in a Kubernetes secret.
+postgres:
+  # -- Set to true to use an external PostgreSQL database
+  enabled: false
+  # -- The name of the existing secret that contains the database URL
+  existingSecret: "convex-postgres-secret"
+  # -- The key within the secret that holds the full database connection URL
+  secretKey: "DATABASE_URL"
+
+
 # -- Configuration for the Convex Dashboard
 dashboard:
   image:
