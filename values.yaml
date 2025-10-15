@@ -28,9 +28,11 @@ postgres:
   # -- Set to true to use an external PostgreSQL database
   enabled: false
   # -- The name of the existing secret that contains the database URL
+  # It must contain the following keys:
+  #   DATABASE_URL:  The full connection string for your PostgreSQL database without the DB name specifically.
+  #   INSTANCE_NAME: The name of the database instance.
   existingSecret: "convex-postgres-secret"
-  # -- The key within the secret that holds the full database connection URL
-  secretKey: "DATABASE_URL"
+  
 
 
 # -- Configuration for the Convex Dashboard
