@@ -1,53 +1,91 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{.Release.Name }}-backend
-  namespace: convex
+  name: {{.Release.Name}}-backend
+  namespace: {{ .Release.Namespace }}
 spec:
-  serviceName: "{{.Release.Name }}-backend-headless"
-  replicas: {{.Values.replicaCount }}
+  serviceName: "{{.Release.Name}}-backend-headless"
+  replicas: {{.Values.replicaCount}}
   selector:
     matchLabels:
-      app: {{.Release.Name }}-backend
+      app: {{.Release.Name}}-backend
   template:
     metadata:
       labels:
-        app: {{.Release.Name }}-backend
+        app: {{.Release.Name}}-backend
     spec:
       containers:
       - name: convex-backend
-        image: "{{.Values.backend.image.repository }}:{{.Values.backend.image.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: {{.Values.backend.image.pullPolicy }}
+        image: "{{.Values.backend.image.repository}}:{{.Values.backend.image.tag | default .Chart.AppVersion}}"
+        imagePullPolicy: {{.Values.backend.image.pullPolicy}}
         ports:
         - containerPort: 3210
           name: api
         - containerPort: 3211
           name: http-actions
-        # env:
-        # {{- /* If postgres is enabled, mount the database URL from the specified secret */}}
-        # {{- if .Values.postgres.enabled }}
-        # - name: DATABASE_URL 
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: {{ .Values.postgres.existingSecret }}
-        #       key: {{ .Values.postgres.secretKey }}
-        # {{- end }}
+        
+        # S3 Configuration Environment Variables (Hetzner Object Storage)
+        env:
+        # AWS Credentials (required)
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: convex-s3-credentials
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: convex-s3-credentials
+              key: AWS_SECRET_ACCESS_KEY
+        
+        # AWS Region (required)
+        - name: AWS_REGION
+          valueFrom:
+            secretKeyRef:
+              name: convex-s3-credentials
+              key: AWS_S3_REGION
+        
+        # S3 Endpoint URL (required for Hetzner)
+        - name: S3_ENDPOINT_URL
+          valueFrom:
+            secretKeyRef:
+              name: convex-s3-credentials
+              key: AWS_S3_ENDPOINT
+        
+        # S3 Storage Buckets (required - using single bucket for all)
+        - name: S3_STORAGE_EXPORTS_BUCKET
+          value: "convexpro"
+        - name: S3_STORAGE_FILES_BUCKET
+          value: "convexpro"
+        - name: S3_STORAGE_MODULES_BUCKET
+          value: "convexpro"
+        - name: S3_STORAGE_SEARCH_BUCKET
+          value: "convexpro"
+        - name: S3_STORAGE_SNAPSHOT_IMPORTS_BUCKET
+          value: "convexpro"
+        
+        # Hetzner S3 Compatibility Settings
+        - name: AWS_S3_FORCE_PATH_STYLE
+          value: "true"
+        - name: AWS_S3_DISABLE_CHECKSUMS
+          value: "false"
+        - name: AWS_S3_DISABLE_SSE
+          value: "false"
+        
         envFrom:
-        {{- /* If postgres is enabled, mount all keys from the secret as env vars */}}
+        # PostgreSQL credentials
         {{- if .Values.postgres.enabled }}
         - secretRef:
             name: {{ .Values.postgres.existingSecret }}
         {{- end }}
+        # Convex admin keys
         - secretRef:
-            name: {{.Values.backend.secretsName }}
-            optional: true  
-
+            name: {{.Values.backend.secretsName}}
+            optional: true
+        # Config map
         - configMapRef:
-            name: {{.Release.Name }}-config
-        volumeMounts:
-        - name: data
-          mountPath: /convex/data
-      volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: {{.Release.Name }}-backend-pvc
+            name: {{.Release.Name}}-config
+        
+      
+        
+        

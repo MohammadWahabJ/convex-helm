@@ -16,7 +16,7 @@ backend:
 
   # -- Configuration for the backend's persistent storage
   persistence:
-    enabled: true
+    enabled: false
     storageClassName: "longhorn-standard"
     accessMode: ReadWriteOnce
     size: 5Gi
@@ -64,51 +64,64 @@ convexConfig:
   requireSsl: "true"
 
 
-
-
 # -- Ingress configuration for exposing services publicly
 ingress:
   # -- Enable or disable the creation of Ingress resources
   enabled: false
 
   # -- The Ingress Class to use. Varies by cluster setup (e.g., "nginx", "traefik")
-  className: "nginx"
+  # Set to empty string "" if you don't want to specify an ingress class
+  className: ""  # Example: "nginx", "traefik", "alb", etc.
 
   # -- Annotations for the Ingress controller and cert-manager
-  # These are critical for automatic TLS certificate provisioning.
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+  # Customize these based on your ingress controller and certificate management setup
+  # Common examples:
+  #   For nginx: kubernetes.io/ingress.class: nginx
+  #   For traefik: kubernetes.io/ingress.class: traefik
+  #   For cert-manager: cert-manager.io/cluster-issuer: letsencrypt-prod
+  #   For AWS ALB: alb.ingress.kubernetes.io/scheme: internet-facing
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 
   # -- Hostname configuration for the Convex Dashboard
+  # REQUIRED when ingress.enabled=true
   dashboard:
-    host: dashboard.convex.ki2.at
+    host: ""  # Example: dashboard.example.com
     paths:
       - path: /
         pathType: Prefix
 
   # -- Hostname configuration for the Convex Backend API
+  # REQUIRED when ingress.enabled=true
   backend:
-    host: api.convex.ki2.at
+    host: ""  # Example: api.example.com
     paths:
       - path: /
         pathType: Prefix
   
-  # -- (Optional) Hostname for HTTP Actions. Defaults to the dashboard host if not set.
+  # -- Optional: Hostname configuration for HTTP Actions (site)
+  # Uncomment and configure if you need a separate domain for HTTP actions
   # site:
-  #   host: site.convex.ki2.at
+  #   host: ""  # Example: site.example.com
   #   paths:
   #     - path: /
   #       pathType: Prefix
 
   # -- TLS configuration. Cert-manager will automatically create secrets with these names.
-  tls:
-    - secretName: convex-dashboard-tls
-      hosts:
-        - dashboard.convex.ki2.at
-    - secretName: convex-api-tls
-      hosts:
-        - api.convex.ki2.at
+  # Update secretName and hosts to match your domains
+  tls: []
+    # - secretName: convex-dashboard-tls
+    #   hosts:
+    #     - ""  # Must match dashboard.host
+    # - secretName: convex-api-tls
+    #   hosts:
+    #     - ""  # Must match backend.host
+    # Uncomment if using site:
     # - secretName: convex-site-tls
     #   hosts:
-    #     - site.convex.ki2.at
+    #     - ""  # Must match site.host
+
+

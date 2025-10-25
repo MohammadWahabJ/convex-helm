@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{.Release.Name }}-config
-  namespace: convex
+  namespace: {{ .Release.Namespace }}
 data:
   {{- /* This is the conditional logic block */}}
   {{- if .Values.ingress.enabled }}

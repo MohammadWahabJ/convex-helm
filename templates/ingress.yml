@@ -1,5 +1,12 @@
 {{- /* Create the Ingress resource only if ingress is enabled in values.yaml */}}
 {{- if .Values.ingress.enabled -}}
+{{- /* Validate that required hosts are configured. The 'fail' function is a best practice for input validation. */}}
+{{- if not .Values.ingress.dashboard.host }}
+{{- fail "ingress.dashboard.host is required when ingress is enabled" }}
+{{- end }}
+{{- if not .Values.ingress.backend.host }}
+{{- fail "ingress.backend.host is required when ingress is enabled" }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -7,57 +14,62 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: {{ .Release.Name }}
+  {{- if .Values.ingress.annotations }}
   annotations:
-    {{- /* Loop through the annotations defined in values.yaml and print them */}}
-    {{- with .Values.ingress.annotations  }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+  {{- end }}
 spec:
-  {{- /* If TLS is configured, add the TLS section */}}
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
   {{- if .Values.ingress.tls }}
   tls:
     {{- toYaml .Values.ingress.tls | nindent 4 }}
   {{- end }}
   rules:
-    {{- /* Rule for the Dashboard */}}
     - host: {{ .Values.ingress.dashboard.host | quote }}
       http:
         paths:
         {{- range .Values.ingress.dashboard.paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
-            backend:
-              service:
-                name: {{ $.Release.Name }}-dashboard-svc
-                port:
-                  number: {{ $.Values.service.dashboard.port }}
+        - path: {{ .path }}
+          pathType: {{ .pathType }}
+          backend:
+            service:
+              name: {{ $.Release.Name }}-dashboard-svc
+              port:
+                number: {{ $.Values.service.dashboard.port }}
         {{- end }}
-    {{- /* Rule for the Backend API */}}
     - host: {{ .Values.ingress.backend.host | quote }}
       http:
         paths:
         {{- range .Values.ingress.backend.paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
-            backend:
-              service:
-                name: {{ $.Release.Name }}-backend-svc
-                port:
-                  number: {{ $.Values.service.backend.port }}
+        - path: {{ .path }}
+          pathType: {{ .pathType }}
+          backend:
+            service:
+              name: {{ $.Release.Name }}-backend-svc
+              port:
+                number: {{ $.Values.service.backend.port }}
         {{- end }}
-    {{- /* Optional Rule for the HTTP Actions (site) */}}
     {{- if .Values.ingress.site }}
     - host: {{ .Values.ingress.site.host | quote }}
       http:
         paths:
         {{- range .Values.ingress.site.paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
-            backend:
-              service:
-                name: {{ $.Release.Name }}-backend-svc
-                port:
-                  number: {{ $.Values.service.backend.actionsPort }}
+        - path: {{ .path }}
+          pathType: {{ .pathType }}
+          backend:
+            service:
+              name: {{ $.Release.Name }}-backend-svc
+              port:
+                number: {{ $.Values.service.backend.actionsPort }}
         {{- end }}
     {{- end }}
 {{- end -}}
+
+
+
+
+
+
+
