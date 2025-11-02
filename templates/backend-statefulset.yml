@@ -54,15 +54,15 @@ spec:
         
         # S3 Storage Buckets (required - using single bucket for all)
         - name: S3_STORAGE_EXPORTS_BUCKET
-          value: "convexpro"
+          value: {{ .Values.s3.buckets.exports | quote }}
         - name: S3_STORAGE_FILES_BUCKET
-          value: "convexpro"
+          value: {{ .Values.s3.buckets.files | quote }}
         - name: S3_STORAGE_MODULES_BUCKET
-          value: "convexpro"
+          value: {{ .Values.s3.buckets.modules | quote }}
         - name: S3_STORAGE_SEARCH_BUCKET
-          value: "convexpro"
+          value: {{ .Values.s3.buckets.search | quote }}
         - name: S3_STORAGE_SNAPSHOT_IMPORTS_BUCKET
-          value: "convexpro"
+          value: {{ .Values.s3.buckets.snapshotImports | quote }}
         
         # Hetzner S3 Compatibility Settings
         - name: AWS_S3_FORCE_PATH_STYLE

@@ -35,6 +35,21 @@ postgres:
   
 
 
+s3:
+  buckets:
+    # -- Bucket name for export data
+    exports: "convexpro"
+    # -- Bucket name for file storage
+    files: "convexpro"
+    # -- Bucket name for module storage
+    modules: "convexpro"
+    # -- Bucket name for search indexes
+    search: "convexpro"
+    # -- Bucket name for snapshot imports
+    snapshotImports: "convexpro"
+
+
+
 # -- Configuration for the Convex Dashboard
 dashboard:
   image:
