@@ -47,14 +47,42 @@ The Convex backend requires S3-compatible object storage for all persistent data
 
 **Supported providers:** AWS S3, MinIO, Hetzner Object Storage, or any S3-compatible service.
 
-#### 🚨 CRITICAL WARNING: Hardcoded Bucket Name
+#### S3 Bucket Configuration
 
-This version of the Helm chart has the S3 bucket name hardcoded to **`convexpro`**.
+By default, this chart uses a single S3 bucket named **`convexpro`** for all storage types. You can customize bucket names in your `values.yaml` or use separate buckets for different purposes:
 
-- You **must** create a bucket named exactly `convexpro` in your object storage provider
-- The S3 credentials must have full read/write access to this specific bucket
-- Attempting to use a different bucket name will fail
-- This will be parameterized in a future release
+**Option 1: Single Bucket (Default)**
+```yaml
+s3:
+  buckets:
+    exports: "convexpro"
+    files: "convexpro"
+    modules: "convexpro"
+    search: "convexpro"
+    snapshotImports: "convexpro"
+```
+
+**Option 2: Separate Buckets**
+```yaml
+s3:
+  buckets:
+    exports: "my-exports-bucket"
+    files: "my-files-bucket"
+    modules: "my-modules-bucket"
+    search: "my-search-bucket"
+    snapshotImports: "my-snapshots-bucket"
+```
+
+**Requirements:**
+- You must create the bucket(s) in your object storage provider before deployment
+- The S3 credentials must have full read/write access to all configured buckets
+- All buckets must exist in the same region and use the same endpoint
+
+**Benefits of separate buckets:**
+- Better access control and security policies
+- Easier lifecycle management (e.g., different retention policies)
+- Simplified cost tracking per data type
+- Independent backup strategies
 
 ### 2B: External PostgreSQL Database
 
@@ -83,26 +111,26 @@ The backend pod will fail to start if these secrets don't exist before `helm ins
 ### 3A: S3 Credentials Secret (Required)
 
 Create a secret named `convex-s3-credentials`:
-
 ```bash
 kubectl create secret generic convex-s3-credentials \
   --from-literal=AWS_ACCESS_KEY_ID='YOUR_AWS_ACCESS_KEY_ID_HERE' \
   --from-literal=AWS_SECRET_ACCESS_KEY='YOUR_AWS_SECRET_ACCESS_KEY_HERE' \
-  --from-literal=AWS_ENDPOINT='YOUR_S3_ENDPOINT_URL_HERE' \
-  --from-literal=AWS_REGION='YOUR_S3_REGION_HERE' \
+  --from-literal=AWS_S3_ENDPOINT='YOUR_S3_ENDPOINT_URL_HERE' \
+  --from-literal=AWS_S3_REGION='YOUR_S3_REGION_HERE' \
   --namespace YOUR_NAMESPACE
 ```
 
 **Required keys:**
 - `AWS_ACCESS_KEY_ID` - Your S3 access key
 - `AWS_SECRET_ACCESS_KEY` - Your S3 secret key
-- `AWS_ENDPOINT` - The S3 endpoint URL (e.g., `s3.amazonaws.com` for AWS)
-- `AWS_REGION` - The S3 region (e.g., `us-east-1`)
+- `AWS_S3_ENDPOINT` - The S3 endpoint URL (e.g., `https://s3.amazonaws.com` for AWS, `https://fsn1.your-objectstorage.com` for Hetzner)
+- `AWS_S3_REGION` - The S3 region (e.g., `us-east-1`)
+
+**Note:** Ensure your S3 credentials have access to all buckets you configured in Step 2A.
 
 ### 3B: PostgreSQL Secret (Recommended)
 
 Create a secret named `convex-postgres-secret`:
-
 ```bash
 kubectl create secret generic convex-postgres-secret \
   --from-literal=DATABASE_URL='postgresql://USER:PASSWORD@HOST:PORT/' \
@@ -123,7 +151,6 @@ kubectl create secret generic convex-postgres-secret \
 ### 4A: Create a Custom values.yaml
 
 **Do not deploy using default values.** Create a file named `my-values.yaml`:
-
 ```yaml
 # -----------------------------------------------------------------
 # Example Production 'my-values.yaml'
@@ -133,6 +160,25 @@ kubectl create secret generic convex-postgres-secret \
 postgres:
   enabled: true
   existingSecret: "convex-postgres-secret"
+
+# S3 Storage Configuration
+# Option 1: Use a single bucket for all storage types (simplest)
+s3:
+  buckets:
+    exports: "convexpro"
+    files: "convexpro"
+    modules: "convexpro"
+    search: "convexpro"
+    snapshotImports: "convexpro"
+
+# Option 2: Use separate buckets (better organization)
+# s3:
+#   buckets:
+#     exports: "my-convex-exports"
+#     files: "my-convex-files"
+#     modules: "my-convex-modules"
+#     search: "my-convex-search"
+#     snapshotImports: "my-convex-snapshots"
 
 # Backend configuration
 backend:
@@ -191,14 +237,12 @@ ingress:
 ### 4B: Install the Chart
 
 Add the Helm repository:
-
 ```bash
 helm repo add convex-charts https://YOUR_HELM_REPO_URL
 helm repo update
 ```
 
 Install the chart:
-
 ```bash
 helm install convex-release \
   convex-charts/convex-self-hosted \
@@ -215,7 +259,6 @@ At this point, the `convex-dashboard` pod should start correctly. The `convex-ba
 This final stage resolves the "chicken-and-egg" problem.
 
 ### 5A: Find Your Backend Pod Name
-
 ```bash
 kubectl get pods -n YOUR_NAMESPACE | grep backend
 ```
@@ -228,7 +271,6 @@ convex-release-backend-0   1/1   Running   0   2m
 ### 5B: Generate the Admin Key
 
 Execute into the pod and run the key generation script:
-
 ```bash
 kubectl exec -it convex-release-backend-0 -n YOUR_NAMESPACE \
   -- ./generate_admin_key.sh
@@ -244,7 +286,6 @@ cvx_selfhosted_......
 ### 5C: Create the Final Admin Secret
 
 Create the `convex-secrets` secret with the generated key:
-
 ```bash
 kubectl create secret generic convex-secrets \
   --from-literal=CONVEX_SELF_HOSTED_ADMIN_KEY='cvx_selfhosted_......' \
@@ -254,7 +295,6 @@ kubectl create secret generic convex-secrets \
 ### 5D: 🚨 CRITICAL: Restart the Backend Pod
 
 The backend pod only reads secrets on startup. Restart the StatefulSet:
-
 ```bash
 kubectl rollout restart statefulset/convex-release-backend -n YOUR_NAMESPACE
 ```
@@ -277,7 +317,6 @@ If you deployed with `ingress.enabled: true`:
 ### Local Testing (Port-Forward)
 
 If you deployed with `ingress.enabled: false`:
-
 ```bash
 # Forward the Dashboard
 kubectl port-forward svc/convex-release-dashboard-svc 8080:80 -n YOUR_NAMESPACE
@@ -311,6 +350,18 @@ kubectl port-forward svc/convex-release-backend-svc 3210:3210 -n YOUR_NAMESPACE
 |-----------|-------------|---------|
 | `postgres.enabled` | Use external PostgreSQL database (recommended) | `false` |
 | `postgres.existingSecret` | Name of secret containing PostgreSQL credentials | `convex-postgres-secret` |
+
+### S3 Storage
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `s3.buckets.exports` | S3 bucket name for export data | `convexpro` |
+| `s3.buckets.files` | S3 bucket name for file storage | `convexpro` |
+| `s3.buckets.modules` | S3 bucket name for module storage | `convexpro` |
+| `s3.buckets.search` | S3 bucket name for search indexes | `convexpro` |
+| `s3.buckets.snapshotImports` | S3 bucket name for snapshot imports | `convexpro` |
+
+**Note:** All buckets can point to the same bucket or different buckets depending on your organizational needs. Ensure all configured buckets exist in your S3-compatible storage before deployment.
 
 ### Dashboard
 
@@ -357,7 +408,6 @@ kubectl port-forward svc/convex-release-backend-svc 3210:3210 -n YOUR_NAMESPACE
 ## 8. Uninstallation
 
 To uninstall the deployment:
-
 ```bash
 helm uninstall convex-release -n YOUR_NAMESPACE
 ```
@@ -371,10 +421,77 @@ Uninstallation will **not** delete:
   - `convex-postgres-secret`
   - `convex-secrets`
 - Your external PostgreSQL database and its data
-- Your S3 bucket (`convexpro`) and all data within it
+- Your S3 bucket(s) and all data within them
 - The PersistentVolumeClaim (if `backend.persistence.enabled: true`)
 
 **You must manually delete these resources if you wish to completely remove all data.**
+
+To delete the secrets:
+```bash
+kubectl delete secret convex-s3-credentials -n YOUR_NAMESPACE
+kubectl delete secret convex-postgres-secret -n YOUR_NAMESPACE
+kubectl delete secret convex-secrets -n YOUR_NAMESPACE
+```
+
+**⚠️ WARNING:** Deleting S3 buckets will result in permanent data loss. Ensure you have backups before proceeding.
+
+---
+
+## 9. Troubleshooting
+
+### Backend Pod Fails to Start
+
+**Symptom:** Backend pod is in `CrashLoopBackOff` or `Error` state
+
+**Common causes:**
+
+1. **Missing S3 credentials secret**
+```bash
+   kubectl get secret convex-s3-credentials -n YOUR_NAMESPACE
+```
+   If not found, create it following Step 3A.
+
+2. **S3 buckets don't exist**
+   - Verify all buckets configured in `s3.buckets.*` exist in your S3 storage
+   - Check bucket names for typos
+
+3. **Invalid S3 credentials**
+   - Verify your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are correct
+   - Ensure credentials have read/write access to all configured buckets
+
+4. **Wrong S3 endpoint or region**
+   - Check `AWS_S3_ENDPOINT` matches your provider's endpoint
+   - Verify `AWS_S3_REGION` is correct
+
+**Debug commands:**
+```bash
+kubectl describe pod convex-release-backend-0 -n YOUR_NAMESPACE
+kubectl logs convex-release-backend-0 -n YOUR_NAMESPACE
+```
+
+### S3 Connection Errors
+
+**Symptom:** Logs show S3 connection failures
+
+**Check:**
+- Endpoint URL format (should include `https://`)
+- Network connectivity from cluster to S3 endpoint
+- Firewall rules allowing outbound HTTPS traffic
+- S3 bucket permissions
+
+### PostgreSQL Connection Issues
+
+**Symptom:** Backend logs show database connection errors
+
+**Check:**
+```bash
+kubectl get secret convex-postgres-secret -n YOUR_NAMESPACE -o yaml
+```
+
+Verify:
+- `DATABASE_URL` is correctly formatted
+- Database is accessible from the Kubernetes cluster
+- Credentials are valid
 
 ---
 
@@ -384,4 +501,3 @@ For issues, questions, or contributions, please refer to the [official Convex se
 
 ## License
 
-[Add your license information here]
