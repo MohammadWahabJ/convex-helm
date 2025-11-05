@@ -68,9 +68,11 @@ spec:
         - name: AWS_S3_FORCE_PATH_STYLE
           value: "true"
         - name: AWS_S3_DISABLE_CHECKSUMS
-          value: "false"
+          value: "true"
         - name: AWS_S3_DISABLE_SSE
-          value: "false"
+          value: "true"
+        - name: AWS_ENDPOINT_URL_S3
+          value: "true"
         
         envFrom:
         # PostgreSQL credentials
